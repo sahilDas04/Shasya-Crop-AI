@@ -36,15 +36,15 @@ model_choice = st.selectbox('Select Model', ['RandomForestClassifier', 'Gaussian
 
 if st.button('Predict'):
     data = np.array([nitro, passh, pota, temperature, humidity, ph, rain]).reshape(1, -1)
-    if model_choice == 'RandomForestClassifier':
-        if loaded_rf:
-            predict = loaded_rf.predict(data)
-            st.success(f"Recommended crop for this season: {predict[0]}")
+    model = loaded_rf if model_choice == 'RandomForestClassifier' else loaded_gnb
+    if model:
+        if hasattr(model, 'predict_proba'):
+            proba = model.predict_proba(data)[0]
+            top5_idx = np.argsort(proba)[::-1][:5]
+            crops = np.array(model.classes_)[top5_idx]
+            st.success(f"Top 5 recommended crops: {', '.join(crops)}")
         else:
-            st.error("RandomForest model not loaded.")
-    elif model_choice == 'GaussianNB':
-        if loaded_gnb:
-            predict = loaded_gnb.predict(data)
+            predict = model.predict(data)
             st.success(f"Recommended crop for this season: {predict[0]}")
-        else:
-            st.error("GaussianNB model not loaded.")
+    else:
+        st.error(f"{model_choice} model not loaded.")
