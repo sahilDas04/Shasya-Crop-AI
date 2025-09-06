@@ -35,10 +35,13 @@ rain = st.number_input('rain Fall')
 model_choice = st.selectbox('Select Model', ['RandomForestClassifier', 'GaussianNB'])
 
 if st.button('Predict'):
+    import pandas as pd
+    feature_names = ['N', 'P', 'K', 'temperature', 'humidity', 'ph', 'rainfall']
     data = np.array([nitro, passh, pota, temperature, humidity, ph, rain]).reshape(1, -1)
     model = loaded_rf if model_choice == 'RandomForestClassifier' else loaded_gnb
     if model:
         if hasattr(model, 'predict_proba'):
+            data = pd.DataFrame([[nitro, passh, pota, temperature, humidity, ph, rain]], columns=feature_names)
             proba = model.predict_proba(data)[0]
             top5_idx = np.argsort(proba)[::-1][:5]
             crops = np.array(model.classes_)[top5_idx]
