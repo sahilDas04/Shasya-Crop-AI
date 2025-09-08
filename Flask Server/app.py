@@ -1,40 +1,33 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 import numpy as np
 import pickle
 import os
+from flask_cors import CORS
 import pandas as pd
 
 app = Flask(__name__)
-
+CORS(app, resources={r"/*": {"origins": "*"}}) 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_dir = os.path.join(BASE_DIR, "../models")
 rf_path = os.path.join(model_dir, "best_randomforest_model.pkl")
-gnb_path = os.path.join(model_dir, "best_gaussiannb_model.pkl")
 
+loaded_rf = None
 try:
     with open(rf_path, 'rb') as f:
         loaded_rf = pickle.load(f)
 except FileNotFoundError:
-    loaded_rf = None
     print(f"RandomForest model file not found: {rf_path}")
 
-try:
-    with open(gnb_path, 'rb') as f:
-        loaded_gnb = pickle.load(f)
-except FileNotFoundError:
-    loaded_gnb = None
-    print(f"GaussianNB model file not found: {gnb_path}")
 
-
-@app.route('/')
+@app.route("/", methods=["GET"])
 def home():
-    return "Crop Recommendation Flask API is running!"
+    return jsonify({"message": "Crop Recommendation Flask API is running with RandomForest!"})
 
 
-@app.route('/predict', methods=['POST'])
+@app.route("/predict", methods=["POST"])
 def predict():
-    data = request.get_json(force=True)
+    data = request.get_json()
 
     try:
         nitro = float(data.get("N", 0))
@@ -43,27 +36,25 @@ def predict():
         temperature = float(data.get("temperature", 0))
         humidity = float(data.get("humidity", 0))
         ph = float(data.get("ph", 0))
-        rain = float(data.get("rain", 0))  
-        model_choice = data.get("model", "RandomForestClassifier")
+        rain = float(data.get("rain", 0))
     except Exception as e:
         return jsonify({"error": f"Invalid input format: {str(e)}"}), 400
 
-    model = loaded_rf if model_choice == 'RandomForestClassifier' else loaded_gnb
-    if not model:
-        return jsonify({"error": f"{model_choice} model not loaded."}), 500
+    if not loaded_rf:
+        return jsonify({"error": "RandomForest model not loaded."}), 500
 
     feature_names = ['N', 'P', 'K', 'temperature', 'humidity', 'ph', 'rainfall']
     input_df = pd.DataFrame([[nitro, passh, pota, temperature, humidity, ph, rain]], columns=feature_names)
 
-    if hasattr(model, 'predict_proba'):
-        proba = model.predict_proba(input_df)[0]
+    if hasattr(loaded_rf, 'predict_proba'):
+        proba = loaded_rf.predict_proba(input_df)[0]
         top5_idx = np.argsort(proba)[::-1][:5]
-        crops = np.array(model.classes_)[top5_idx].tolist()
+        crops = np.array(loaded_rf.classes_)[top5_idx].tolist()
         return jsonify({"top5_recommended_crops": crops})
     else:
-        prediction = model.predict(input_df)[0]
+        prediction = loaded_rf.predict(input_df)[0]
         return jsonify({"recommended_crop": prediction})
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
