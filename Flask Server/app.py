@@ -107,7 +107,7 @@ def home():
     return jsonify({"message": "Crop Recommendation Flask API is running with RandomForest!"})
 
 
-@app.route("/predict", methods=["POST"])
+@app.route("/crop-recommend", methods=["POST"])
 def predict():
     data = request.get_json()
 
