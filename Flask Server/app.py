@@ -5,6 +5,7 @@ import os
 from flask_cors import CORS
 import pandas as pd
 import math
+import datetime
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}) 
@@ -105,6 +106,15 @@ def recommend_fertilizer(crop, season, land_size, current_N, current_P, current_
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "Crop Recommendation Flask API is running with RandomForest!"})
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    status = {
+        "status": "okay",
+        "model_loaded": loaded_rf is not None,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+    return jsonify(status)
 
 
 @app.route("/crop-recommend", methods=["POST"])
